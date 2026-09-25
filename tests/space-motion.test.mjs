@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { advanceNavigation } from '../dist/space-motion.js';
+const simulate=(state,seconds,fps=60)=>{for(let t=0;t<seconds;t+=1/fps)state=advanceNavigation(state,1/fps,t*1000,5);return state;};
+const initial={position:1.2,velocity:4,target:null};
+const early=advanceNavigation(initial,1/60,100,5);
+assert(early.position>initial.position,'Input must continue moving without another wheel event');
+assert(early.velocity>0&&early.velocity<initial.velocity,'Velocity must damp instead of stopping');
+const settled=simulate(initial,8);
+assert.equal(settled.velocity,0,'Magnetic snapping must come to rest');
+assert.equal(settled.position,Math.round(settled.position),'Snapping must center a project exactly');
+const a=simulate(initial,1,30),b=simulate(initial,1,120);
+assert(Math.abs(a.position-b.position)<.08,'Navigation must remain consistent across frame rates');
+assert.equal(simulate({position:2,velocity:0,target:4},6).position,4,'Index and keyboard navigation must settle at requested project');
+assert.equal(advanceNavigation({position:0,velocity:-4,target:null},.03,0,5).position,0,'First boundary must be clamped');
+assert.equal(advanceNavigation({position:5,velocity:4,target:null},.03,0,5).position,5,'Last boundary must be clamped');
+assert.equal(simulate({position:.8,velocity:0,target:null},5).position,1,'Idle fractional positions must be attracted to nearest screen');
+console.log('PASS: inertia, damping, magnetic snap, frame-rate stability, index navigation, and bounds');
